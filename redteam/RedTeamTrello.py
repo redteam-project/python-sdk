@@ -1,20 +1,33 @@
+#!/usr/bin/env python
+"""Trello exploit crowdwourcing SDK for redteam"""
+
 import os
 
 import trello as pytrello
 import yaml
-from jinja2 import Environment, BaseLoader
+from jinja2 import Environment, FileSystemLoader
+
+__author__ = 'Jason Callaway'
+__email__ = 'jasoncallaway@fedoraproject.org'
+__license__ = 'GNU Public License v2'
+__version__ = '0.2'
+__status__ = 'alpha'
 
 
 class RedTeamTrello(object):
     def __init__(self, **kwargs):
-        # Cards cache
-        self.cards = {}
+        # Cards cache. We'll try to use this instead of getting the same card
+        # lists for subsequent calls of list functions
+        self.cards_by_name = {}
+        self.cards_by_id = {}
 
         # Get config values
         self.config = {}
         if kwargs.get('config'):
+            # If a different yml config is specified, we'll use that
             self.config_yml = kwargs['config']
         else:
+            # Otherwise, go with the default config file
             self.config_yml = os.path.dirname(os.path.realpath(__file__)) + \
                           '/trello.yml'
         try:
@@ -25,10 +38,14 @@ class RedTeamTrello(object):
 
         # Get jinja templates
         if kwargs.get('templates'):
+            # if a different path to j2 templates is specified, use it
             self.template_dir = kwargs['templates']
         else:
+            # Otherwise use the default path
             self.template_dir = \
                 os.path.dirname(os.path.realpath(__file__)) + '/'
+        # We currently only have 'mapped' and 'curated' exploit states, with a
+        # jinja2 template for each
         self.template_curated = self.template_dir + 'curated.j2'
         self.template_mapped = self.template_dir + 'mapped.j2'
         try:
@@ -37,10 +54,13 @@ class RedTeamTrello(object):
             with open(self.template_mapped) as f:
                 pass
         except IOError as e:
-            raise IOError(e)
+            raise IOError('redteam could not read the jinja templates at ' +
+                          self.template_dir + ': ' + str(e))
 
-        # Get auth keys
+        # Get auth keys, either from a yml file or environment variables
         if kwargs.get('auth'):
+            # If auth is specified in the constructor, use that absolute path
+            # to a yaml file
             self.auth_yml = kwargs['auth']
             try:
                 self.auth = yaml.safe_load(self.auth_yml)
@@ -48,6 +68,8 @@ class RedTeamTrello(object):
                 raise Exception('redteam could not load the auth yml at ' +
                                 self.auth_yml)
         else:
+            # The default is to look at the calling environment variables for
+            # our auth data
             trello_auth_values = ['REDTEAM_TRELLO_API_KEY',
                                   'REDTEAM_TRELLO_API_SECRET',
                                   'REDTEAM_TRELLO_TOKEN',
@@ -60,7 +82,7 @@ class RedTeamTrello(object):
                 auth[v] = os.environ.get(v)
             self.auth = auth
 
-        # Fire up Trello client
+        # Create a connection to the Trello API
         try:
             self.client = pytrello.TrelloClient(
                 api_key=self.auth['REDTEAM_TRELLO_API_KEY'],
@@ -75,6 +97,8 @@ class RedTeamTrello(object):
 
     @staticmethod
     def parse_exploits(csv):
+        """Parse `elem assess` output in the form of a csv file"""
+
         # Note, this is brittle and depends on elem output
         exploits = {}
         try:
@@ -118,64 +142,76 @@ class RedTeamTrello(object):
 
         return exploits
 
-    def get_extant_cards_in_list(self, cache=True, **kwargs):
-        list_id = ''
+    def get_lists(self, **kwargs):
+        """Get list names and IDs from a board"""
+
+        board_id = self.config['board_id']
+        if kwargs.get('board_id'):
+            # Check to see if a board_id was explicitly specified
+            board_id = kwargs['board_id']
+
+        board = self.client.get_board(board_id=board_id)
+        return board.open_lists()
+
+    def update_cards_cache(self, **kwargs):
+        """Get the Trello cards in list_id and return a list of names"""
+
+        list_id = self.config['list_mapped_id']
         if kwargs.get('list_id'):
+            # Check to see if a list_id was explicitly specified
             list_id = kwargs['list_id']
-        else:
-            list_id = self.config['list_mapped_id']
+        # Todo: add support for explicit board_id
 
         try:
+            # Get the board and list objects from the Trello SDK and create a
+            # list of card objects
             board = self.client.get_board(board_id=self.config['board_id'])
-            list = board.get_list(list_id)
-            cards = list.list_cards()
-            if cache:
-                for card in cards:
-                    self.cards[card.name] = card.id
-            return cards
+            board_list = board.get_list(list_id)
+            cards = board_list.list_cards()
+            for card in cards:
+                # Update the cards cache, both by name and id
+                self.cards_by_name[card.name] = card.id
+                self.cards_by_id[card.id] = card.name
         except Exception as e:
-            raise Exception('redteam could not list cards in list ' +
+            raise Exception('redteam could update cards cache ' +
                             list_id + ': ' + str(e))
 
-    def render_description(self, state, values, **kwargs):
+    def render_description(self, state, values):
+        """Render a card's description based on a jinja2 template"""
+
+        # Validate that we're dealing with an accepted state
         if state == 'mapped' or state == 'curated':
-            template = ''
-            if kwargs.get('template'):
-                template = kwargs['template']
-            else:
-                template = self.template_mapped
             try:
-                jinja_template = Environment(loader=BaseLoader()).from_string(template)
-                return jinja_template.render(values)
+                # Render and return the template
+                jinja_env = \
+                    Environment(loader=FileSystemLoader(self.template_dir))
+                return jinja_env.get_template(state + '.j2').render(values)
             except Exception as e:
                 raise Exception('redteam could not get or render template ' +
-                                template + ': ' + str(e))
+                                state + '.j2: ' + str(e))
         else:
             raise Exception('redteam render_description state must be ' +
                             '"mapped" or "curated"')
 
-    def get_card_id(self, name, use_cache=True, **kwargs):
-        list_id = ''
+    def get_card_id(self, name, use_cache=False, **kwargs):
+        """Get a Trello card's ID by its name"""
+
+        # Load the default list_id
+        list_id = self.config['list_mapped_id']
         if kwargs.get('list_id'):
+            # Check to see if a list_id was explictly set
             list_id = kwargs['list_id']
-        else:
-            list_id = self.config['list_mapped_id']
 
         try:
-            if use_cache and self.cards:
-                card_names = self.cards.keys()
-                if name in card_names:
-                    return self.cards[name]
-                else:
-                    return None
+            if not use_cache:
+                # Normally we use the cards cache, but we update it if
+                # use_cache is set to false
+                self.update_cards_cache(list_id=list_id)
+            if name in self.cards_by_name.keys():
+                # If the card exists, return its ID
+                return self.cards_by_name[name]
             else:
-                card_names = self.get_extant_cards_in_list(self.config['board_id'],
-                                                      list_id=list_id)
-                # card_names = cards.keys()
-                if name in card_names:
-                    return self.cards[name]
-                else:
-                    return None
+                return None
         except Exception as e:
             raise Exception('redteam cannot get_card_id for name ' +
                             name + ' in list ' + list_id + ' ' + str(e))
@@ -187,15 +223,24 @@ class RedTeamTrello(object):
         return self.config['list_curated_id']
 
     def add_card(self, list_id, name, desc, **kwargs):
+        """Use the Trello SDK to create a new card"""
+
+        # By default we don't use any labels, but we'll check for explictly
+        # set ones
         card_labels = None
         if kwargs.get('card_labels'):
             card_labels = kwargs['card_lables']
         try:
+            # Get the board object
             board = self.client.get_board(board_id=self.config['board_id'])
-            list = board.get_list(list_id)
+            # Get the list object from the board
+            board_list = board.get_list(list_id)
             if card_labels:
-                list.add_card(name=name, desc=desc, labels=card_labels)
-            list.add_card(name=name, desc=desc)
+                # If there are labels set, create the card with labels
+                board_list.add_card(name=name, desc=desc, labels=card_labels)
+            else:
+                # Otherwise, create the card without labels
+                board_list.add_card(name=name, desc=desc)
         except Exception as e:
             raise Exception('redteam could not add card to list ' + list_id +
                             ' ' + str(e))

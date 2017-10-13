@@ -103,3 +103,4 @@ ENV/
 .idea
 env.sh
 */files.csv
+.DS_Store

@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+"""Exploit-DB helper functions for redteam"""
 
 import calendar
 import os
@@ -5,6 +7,12 @@ import time
 
 import requests
 from fake_useragent import UserAgent
+
+__author__ = 'Jason Callaway'
+__email__ = 'jasoncallaway@fedoraproject.org'
+__license__ = 'GNU Public License v2'
+__version__ = '0.2'
+__status__ = 'alpha'
 
 
 class EDB(object):
@@ -48,7 +56,6 @@ class EDB(object):
             except Exception as e:
                 raise e
 
-
     def parse_filescsv(self):
         self.refresh_filescsv()
         exploits = {}
@@ -66,6 +73,7 @@ class EDB(object):
                     exploit['platform'] = fields[5]
                     exploit['os_type'] = fields[6]
                     exploit['port'] = fields[7]
+                    exploit['edb_url'] = self.edb_url + edb_id
                     exploits[edb_id] = exploit
         except Exception as e:
             raise Exception('redteam.EDB could not parse files.csv: ' +
@@ -77,6 +85,9 @@ class EDB(object):
             return self.metadata[edb_id]['description']
         else:
             raise Exception('no exploit found for EDB ID: ' + edb_id)
+
+    def get_url(self, edb_id):
+        return self.edb_url + edb_id
 
 
 
