@@ -102,3 +102,4 @@ ENV/
 
 .idea
 env.sh
+*/files.csv

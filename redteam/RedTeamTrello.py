@@ -1,7 +1,8 @@
-import yaml
-import trello as pytrello
-from jinja2 import Environment, BaseLoader
 import os
+
+import trello as pytrello
+import yaml
+from jinja2 import Environment, BaseLoader
 
 
 class RedTeamTrello(object):
@@ -168,11 +169,11 @@ class RedTeamTrello(object):
                 else:
                     return None
             else:
-                cards = self.get_extant_cards_in_list(self.config['board_id'],
+                card_names = self.get_extant_cards_in_list(self.config['board_id'],
                                                       list_id=list_id)
-                card_names = self.cards.keys()
+                # card_names = cards.keys()
                 if name in card_names:
-                    return cards[name]
+                    return self.cards[name]
                 else:
                     return None
         except Exception as e:

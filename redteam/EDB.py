@@ -1,39 +1,82 @@
 
-from fake_useragent import UserAgent
+import calendar
+import os
+import time
+
 import requests
-from BeautifulSoup import BeautifulSoup
-from HTMLParser import HTMLParser
+from fake_useragent import UserAgent
 
 
 class EDB(object):
     def __init__(self):
+        self.dir = os.path.dirname(os.path.realpath(__file__))
+        self.filescsv = self.dir + '/files.csv'
+        self.filescsv_url = 'https://raw.githubusercontent.com/'  + \
+                            'offensive-security/exploit-database/' + \
+                            'master/files.csv'
         self.edb_url = 'https://www.exploit-db.com/exploits/'
         self.ua = UserAgent()
         self.headers = {'User-Agent': str(self.ua.chrome)}
+        self.metadata = self.parse_filescsv()
 
-    def get_title(self, edb_id, **kwargs):
-        edb_url = ''
-        headers = ''
-        if kwargs.get('edb_url'):
-            edb_url = kwargs['edb_url']
+    def download_filescsv(self, **kwargs):
+        filename = ''
+        if kwargs.get('output'):
+            filename = kwargs['output']
         else:
-            edb_url = self.edb_url
-        if kwargs.get('headers'):
-            headers = kwargs['headers']
-        else:
-            headers = self.headers
-
+            filename = self.filescsv
         try:
-            edb_html = requests.get(edb_url,
-                                    headers=headers)
-            parser = HTMLParser()
-            soup = BeautifulSoup(edb_html.content)
-            title_tag = soup.findAll('h1', itemprop='headline')
-            title = parser.unescape(title_tag[0].contents[0])
+            response = requests.get(self.filescsv_url)
+            with open(filename, 'w') as f:
+                f.write(response.content)
         except Exception as e:
-            raise Exception('redteam could not get EDB title: ' + str(e))
+            raise Exception('redteam.EDB could not get new files.csv: ' +
+                            str(e))
 
-        return title
+    def refresh_filescsv(self, force=False):
+        if os.path.isfile(self.filescsv):
+            s = os.stat(self.filescsv)
+            now = calendar.timegm(time.gmtime())
+            if now - s.st_mtime > 86400 or force:
+                try:
+                    self.download_filescsv()
+                except Exception as e:
+                    raise e
+        else:
+            try:
+                self.download_filescsv()
+            except Exception as e:
+                raise e
+
+
+    def parse_filescsv(self):
+        self.refresh_filescsv()
+        exploits = {}
+        try:
+            with open(self.filescsv) as f:
+                for line in f.readlines()[1:]:
+                    edb_id = ''
+                    exploit = {}
+                    fields =  line.split(',')
+                    edb_id = fields[0]
+                    exploit['filename'] = fields[1]
+                    exploit['description'] = fields[2]
+                    exploit['date'] = fields[3]
+                    exploit['author'] = fields[4]
+                    exploit['platform'] = fields[5]
+                    exploit['os_type'] = fields[6]
+                    exploit['port'] = fields[7]
+                    exploits[edb_id] = exploit
+        except Exception as e:
+            raise Exception('redteam.EDB could not parse files.csv: ' +
+                            str(e))
+        return exploits
+
+    def get_title(self, edb_id):
+        if self.metadata.get(edb_id):
+            return self.metadata[edb_id]['description']
+        else:
+            raise Exception('no exploit found for EDB ID: ' + edb_id)
 
 
 
