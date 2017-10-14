@@ -32,6 +32,7 @@ class RedTeam(object):
 
             self.EDB = EDB.EDB(cache_dir=self.cache_dir)
 
+            # Todo: this seems broken. Fix it, for now commented out
             # self.connect_to_trello = True
             # if kwargs.get('connect_to_trello'):
             #     self.connect_to_trello = kwargs['connect_to_trello']

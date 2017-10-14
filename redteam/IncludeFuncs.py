@@ -3,6 +3,7 @@
 
 import os
 import subprocess
+import yaml
 
 __author__ = 'Jason Callaway'
 __email__ = 'jasoncallaway@fedoraproject.org'
@@ -14,6 +15,10 @@ __status__ = 'alpha'
 class IncludeFuncs(object):
     def __init__(self):
         pass
+
+    @staticmethod
+    def parse_yaml(filename):
+        return yaml.safe_load(filename)
 
     @staticmethod
     def run_command(cmd, description):
@@ -34,3 +39,21 @@ class IncludeFuncs(object):
                 pass
             else:
                 raise
+
+    @staticmethod
+    def is_executable(absolute_path):
+        if os.path.isfile(absolute_path) and \
+                os.access(absolute_path, os.X_OK):
+            return True
+        else:
+            return False
+
+    def which(self, program):
+        import os
+
+        for path in os.environ["PATH"].split(os.pathsep):
+            absolute_path = os.path.join(path, program)
+            if self.is_executable(absolute_path):
+                return absolute_path
+
+        return None
