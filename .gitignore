@@ -104,3 +104,6 @@ ENV/
 env.sh
 */files.csv
 .DS_Store
+examples/edb*
+examples/trello*
+examples/sapi*

@@ -10,7 +10,7 @@ from jinja2 import Environment, FileSystemLoader
 __author__ = 'Jason Callaway'
 __email__ = 'jasoncallaway@fedoraproject.org'
 __license__ = 'GNU Public License v2'
-__version__ = '0.2'
+__version__ = '0.3'
 __status__ = 'alpha'
 
 
@@ -21,6 +21,10 @@ class RedTeamTrello(object):
         self.cards_by_name = {}
         self.cards_by_id = {}
 
+        self.cache_dir = os.getcwd() + '/trello'
+        if kwargs.get('cache_dir'):
+            self.cache_dir = kwargs['cache_dir'] + '/trello'
+
         # Get config values
         self.config = {}
         if kwargs.get('config'):
@@ -28,8 +32,7 @@ class RedTeamTrello(object):
             self.config_yml = kwargs['config']
         else:
             # Otherwise, go with the default config file
-            self.config_yml = os.path.dirname(os.path.realpath(__file__)) + \
-                          '/trello.yml'
+            self.config_yml = self.cache_dir + '/trello.yml'
         try:
             with open(self.config_yml) as f:
                 self.config = yaml.safe_load(f.read())
@@ -37,17 +40,14 @@ class RedTeamTrello(object):
             raise IOError(e)
 
         # Get jinja templates
+        self.template_dir = self.cache_dir
         if kwargs.get('templates'):
             # if a different path to j2 templates is specified, use it
             self.template_dir = kwargs['templates']
-        else:
-            # Otherwise use the default path
-            self.template_dir = \
-                os.path.dirname(os.path.realpath(__file__)) + '/'
         # We currently only have 'mapped' and 'curated' exploit states, with a
         # jinja2 template for each
-        self.template_curated = self.template_dir + 'curated.j2'
-        self.template_mapped = self.template_dir + 'mapped.j2'
+        self.template_curated = self.template_dir + '/curated.j2'
+        self.template_mapped = self.template_dir + '/mapped.j2'
         try:
             with open(self.template_curated) as f:
                 pass
@@ -57,16 +57,18 @@ class RedTeamTrello(object):
             raise IOError('redteam could not read the jinja templates at ' +
                           self.template_dir + ': ' + str(e))
 
-        # Get auth keys, either from a yml file or environment variables
-        if kwargs.get('auth'):
-            # If auth is specified in the constructor, use that absolute path
-            # to a yaml file
-            self.auth_yml = kwargs['auth']
+        # Get auth keys, either from a yml file, dict,  or environment
+        # variables
+        auth_yml = self.cache_dir + '/trello/auth.yml'
+        if os.path.isfile(auth_yml):
             try:
-                self.auth = yaml.safe_load(self.auth_yml)
+                self.auth = yaml.safe_load(auth_yml)
             except Exception as e:
                 raise Exception('redteam could not load the auth yml at ' +
-                                self.auth_yml)
+                                auth_yml)
+        elif kwargs.get('auth'):
+            # If auth is specified in the constructor, use that absolute path
+            self.auth = kwargs['auth']
         else:
             # The default is to look at the calling environment variables for
             # our auth data
@@ -83,6 +85,7 @@ class RedTeamTrello(object):
             self.auth = auth
 
         # Create a connection to the Trello API
+
         try:
             self.client = pytrello.TrelloClient(
                 api_key=self.auth['REDTEAM_TRELLO_API_KEY'],
@@ -155,6 +158,9 @@ class RedTeamTrello(object):
 
     def update_cards_cache(self, **kwargs):
         """Get the Trello cards in list_id and return a list of names"""
+
+        # These are too variable to pickle, so we reach out to the API each
+        # time.
 
         list_id = self.config['list_mapped_id']
         if kwargs.get('list_id'):

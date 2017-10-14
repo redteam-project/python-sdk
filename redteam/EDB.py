@@ -11,15 +11,17 @@ from fake_useragent import UserAgent
 __author__ = 'Jason Callaway'
 __email__ = 'jasoncallaway@fedoraproject.org'
 __license__ = 'GNU Public License v2'
-__version__ = '0.2'
+__version__ = '0.3'
 __status__ = 'alpha'
 
 
 class EDB(object):
-    def __init__(self):
-        self.dir = os.path.dirname(os.path.realpath(__file__))
+    def __init__(self, **kwargs):
+        self.dir = os.path.dirname(os.path.realpath(__file__)) + '/edb'
+        if kwargs.get('cache_dir'):
+            self.dir = kwargs['cache_dir'] + '/edb'
         self.filescsv = self.dir + '/files.csv'
-        self.filescsv_url = 'https://raw.githubusercontent.com/'  + \
+        self.filescsv_url = 'https://raw.githubusercontent.com/' + \
                             'offensive-security/exploit-database/' + \
                             'master/files.csv'
         self.edb_url = 'https://www.exploit-db.com/exploits/'

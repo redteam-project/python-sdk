@@ -13,28 +13,43 @@ from datetime import datetime
 __author__ = 'Jason Callaway'
 __email__ = 'jasoncallaway@fedoraproject.org'
 __license__ = 'GNU Public License v2'
-__version__ = '0.2'
+__version__ = '0.3'
 __status__ = 'alpha'
 
 
 class SAPI(object):
     def __init__(self, **kwargs):
+        self.cvrf = []
+        self.rhsas = []
+
+        self.cache_dir = os.getcwd() + '/sapi'
+        if kwargs.get('cache_dir'):
+            self.cache_dir = kwargs['cache_dir'] + '/sapi'
+
+        self.debug = False
+        if kwargs.get('debug'):
+            self.debug = kwargs['debug']
+
         self.connected = True
+        if kwargs.get('connected'):
+            self.connected = kwargs['connected']
+
         self.redhat_sapi = 'https://access.redhat.com/labs/securitydataapi/'
+
         if kwargs.get('day'):
             self.day = kwargs['day']
         else:
             self.day = datetime.strftime(datetime.now(), '%Y%m%d')
         self.second = datetime.strftime(datetime.now(), '%Y%m%d%H%M%S')
-        self.picklejar = os.path.expanduser('~/.redteam/picklejar')
+
+        self.picklejar = self.cache_dir + '/picklejar'
         if kwargs.get('picklejar'):
             self.picklejar = kwargs['picklejar']
-        self.mkdir_p(self.picklejar)
-        self.debug = False
-        if kwargs.get('debug'):
-            self.debug = kwargs['debug']
-        self.cvrf = []
-        self.rhsas = []
+
+        try:
+            self.mkdir_p(self.picklejar)
+        except Exception as e:
+            raise
 
     @staticmethod
     def mkdir_p(path):

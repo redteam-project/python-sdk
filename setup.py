@@ -10,7 +10,7 @@ setup(name='redteam',
       author_email='jasoncallaway@fedoraproject.org',
       license='GPLv2',
       url='https://github.com/fedoraredteam/python-sdk',
-      download_url='https://github.com/fedoraredteam/python-sdk/archive/0.1.tar.gz',
+      download_url='https://github.com/fedoraredteam/python-sdk/archive/0.3.tar.gz',
       keywords=['cve', 'exploit', 'linux', 'red team', 'pen testing'],
       classifiers=[
             'Development Status :: 4 - Beta',
