@@ -17,9 +17,7 @@ __status__ = 'alpha'
 
 class EDB(object):
     def __init__(self, **kwargs):
-        self.dir = os.path.dirname(os.path.realpath(__file__)) + '/edb'
-        if kwargs.get('cache_dir'):
-            self.dir = kwargs['cache_dir'] + '/edb'
+        self.dir = kwargs['cache_dir'] + '/edb'
         self.filescsv = self.dir + '/files.csv'
         self.filescsv_url = 'https://raw.githubusercontent.com/' + \
                             'offensive-security/exploit-database/' + \
@@ -30,11 +28,10 @@ class EDB(object):
         self.metadata = self.parse_filescsv()
 
     def download_filescsv(self, **kwargs):
-        filename = ''
+        filename = self.filescsv
         if kwargs.get('output'):
             filename = kwargs['output']
-        else:
-            filename = self.filescsv
+
         try:
             response = requests.get(self.filescsv_url)
             with open(filename, 'w') as f:

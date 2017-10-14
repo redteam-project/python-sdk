@@ -3,7 +3,8 @@
 
 import os
 import shutil
-import EDB, RedTeamTrello, SAPI
+import subprocess
+import EDB, RedTeamTrello, SAPI, IncludeFuncs
 
 __author__ = 'Jason Callaway'
 __email__ = 'jasoncallaway@fedoraproject.org'
@@ -13,45 +14,13 @@ __status__ = 'alpha'
 
 
 class RedTeam(object):
-
-    @staticmethod
-    def mkdir_p(path):
-        try:
-            os.makedirs(path)
-        except OSError as e:
-            if e.errno == 17 and os.path.isdir(path):
-                pass
-            else:
-                raise
-
-    def setup(self, **kwargs):
-        source_dir = os.path.dirname(os.path.realpath(__file__))
-
-        cache_dir = self.cache_dir
-        if '~' in cache_dir:
-            cache_dir = os.path.expanduser(cache_dir)
-
-        try:
-            for new_dir in ['edb', 'trello', 'sapi', 'sapi/picklejar']:
-                self.mkdir_p(cache_dir + '/' + new_dir)
-                if self.debug:
-                    print('+ made directory: ' + cache_dir + '/' + new_dir)
-
-            # setup trello files
-            for filename in ['curated.j2', 'mapped.j2', 'trello.yml']:
-                shutil.copy2(source_dir + '/defaults/trello/' + filename,
-                             cache_dir + '/trello')
-                if self.debug:
-                    print('+ copied ' + source_dir + '/' + filename +
-                          ' to ' + cache_dir + '/trello')
-        except Exception as e:
-            raise
-
     def __init__(self, **kwargs):
         self.dest_dir = None
         self.cache_dir = os.getcwd()
         if kwargs.get('cache_dir'):
             self.cache_dir = kwargs['cache_dir']
+
+        self.funcs = IncludeFuncs.IncludeFuncs()
 
         self.debug = False
         if kwargs.get('debug'):
@@ -73,3 +42,30 @@ class RedTeam(object):
             self.SAPI = SAPI.SAPI(debug=self.debug, cache_dir=self.cache_dir)
         except Exception as e:
             raise
+
+    def setup(self, **kwargs):
+        source_dir = os.path.dirname(os.path.realpath(__file__))
+
+        if '~' in self.cache_dir:
+            self.cache_dir = os.path.expanduser(self.cache_dir)
+
+        try:
+            for new_dir in ['edb', 'trello', 'sapi', 'sapi/picklejar']:
+                dir_name = self.cache_dir + '/' + new_dir
+                if not os.path.isdir(dir_name):
+                    self.funcs.mkdir_p(dir_name)
+                    if self.debug:
+                        print('+ made directory: ' + dir_name)
+
+            # setup trello files
+            for filename in ['curated.j2', 'mapped.j2', 'trello.yml']:
+                new_file = self.cache_dir + '/trello/' + filename
+                if not os.path.isfile(new_file):
+                    shutil.copy2(source_dir + '/defaults/trello/' + filename,
+                                 new_file)
+                    if self.debug:
+                        print('+ copied ' + source_dir + '/' + filename +
+                              ' to ' + new_file)
+        except Exception as e:
+            raise
+

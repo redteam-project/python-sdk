@@ -12,7 +12,9 @@ __email__ = 'jasoncallaway@fedoraproject.org'
 __license__ = 'GNU Public License v2'
 
 # Initialize our redteam SDK
-r = redteam.RedTeam(debug=True, connect_to_trello=False)
+r = redteam.RedTeam(debug=True,
+                    connect_to_trello=False,
+                    cache_dir="~/.redteam")
 sapi = r.SAPI
 
 sapi.cache_rhsas()

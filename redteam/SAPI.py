@@ -10,6 +10,8 @@ import urllib2
 
 from datetime import datetime
 
+import IncludeFuncs
+
 __author__ = 'Jason Callaway'
 __email__ = 'jasoncallaway@fedoraproject.org'
 __license__ = 'GNU Public License v2'
@@ -21,6 +23,8 @@ class SAPI(object):
     def __init__(self, **kwargs):
         self.cvrf = []
         self.rhsas = []
+
+        self.funcs = IncludeFuncs.IncludeFuncs()
 
         self.cache_dir = os.getcwd() + '/sapi'
         if kwargs.get('cache_dir'):
@@ -47,19 +51,9 @@ class SAPI(object):
             self.picklejar = kwargs['picklejar']
 
         try:
-            self.mkdir_p(self.picklejar)
+            self.funcs.mkdir_p(self.picklejar)
         except Exception as e:
             raise
-
-    @staticmethod
-    def mkdir_p(path):
-        try:
-            os.makedirs(path)
-        except OSError as e:
-            if e.errno == 17 and os.path.isdir(path):
-                pass
-            else:
-                raise
 
     def cache_rhsas(self):
         self.cvrf = self.retrieve_redhat_cfrv()
