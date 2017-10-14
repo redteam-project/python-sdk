@@ -1,1 +1,2 @@
-recursive-include defaults
+include README.md
+recursive-include defaults *
