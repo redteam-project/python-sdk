@@ -9,7 +9,7 @@ import EDB, RedTeamTrello, SAPI, IncludeFuncs
 __author__ = 'Jason Callaway'
 __email__ = 'jasoncallaway@fedoraproject.org'
 __license__ = 'GNU Public License v2'
-__version__ = '0.3'
+__version__ = '0.3.1'
 __status__ = 'alpha'
 
 
