@@ -107,3 +107,4 @@ env.sh
 examples/edb*
 examples/trello*
 examples/sapi*
+redteam/revup.sh

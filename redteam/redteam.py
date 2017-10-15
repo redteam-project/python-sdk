@@ -9,7 +9,7 @@ import EDB, RedTeamTrello, SAPI, IncludeFuncs
 __author__ = 'Jason Callaway'
 __email__ = 'jasoncallaway@fedoraproject.org'
 __license__ = 'GNU Public License v2'
-__version__ = '0.3.2'
+__version__ = '0.3.3'
 __status__ = 'alpha'
 
 
@@ -59,14 +59,24 @@ class RedTeam(object):
                         print('+ made directory: ' + dir_name)
 
             # setup trello files
+            need_to_untar = False
             for filename in ['curated.j2', 'mapped.j2', 'trello.yml']:
                 new_file = self.cache_dir + '/trello/' + filename
                 if not os.path.isfile(new_file):
-                    shutil.copy2(source_dir + '/defaults/trello/' + filename,
-                                 new_file)
-                    if self.debug:
-                        print('+ copied ' + source_dir + '/' + filename +
-                              ' to ' + new_file)
+                    need_to_untar = True
+                    # shutil.copy2(source_dir + '/defaults/trello/' + filename,
+                    #              new_file)
+                    # if self.debug:
+                    #     print('+ copied ' + source_dir + '/' + filename +
+                    #           ' to ' + new_file)
+            if need_to_untar:
+                tar = self.funcs.which('tar')
+                r = self.funcs.run_command('(cd ' + self.cache_dir + '; ' +
+                                           tar + ' xzf' + source_dir +
+                                           '/trello.tar.gz)')
+                if self.debug:
+                    print('+ untarred ' + source_dir + '/trello.tar.gz')
+
         except Exception as e:
             raise
 
