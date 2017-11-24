@@ -73,7 +73,7 @@ class RedTeam(object):
                 tar = self.funcs.which('tar')
                 r = self.funcs.run_command('(cd ' + self.cache_dir + '; ' +
                                            tar + ' xzf' + source_dir +
-                                           '/trello.tar.gz)')
+                                           '/trello.tar.gz)', 'Trello')
                 if self.debug:
                     print('+ untarred ' + source_dir + '/trello.tar.gz')
 
