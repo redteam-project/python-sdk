@@ -9,7 +9,7 @@ import EDB, RedTeamTrello, SAPI, IncludeFuncs
 __author__ = 'Jason Callaway'
 __email__ = 'jasoncallaway@fedoraproject.org'
 __license__ = 'GNU Public License v2'
-__version__ = '0.3.4'
+__version__ = '0.3.5'
 __status__ = 'alpha'
 
 
@@ -26,25 +26,35 @@ class RedTeam(object):
         if kwargs.get('debug'):
             self.debug = kwargs['debug']
 
-        try:
-            self.setup()
-            # Todo: add support in this constructor for subclass arguments
+        if kwargs.get('init_trello'):
+            if kwargs['init_trello'] is True:
+                try:
+                    self.setup_trello()
+                    # Todo: this seems broken. Fix it, for now commented out
+                    # self.connect_to_trello = True
+                    # if kwargs.get('connect_to_trello'):
+                    #     self.connect_to_trello = kwargs['connect_to_trello']
+                    # if self.connect_to_trello:
+                    #     self.RedTeamTrello = \
+                    #         RedTeamTrello.RedTeamTrello(cache_dir=self.cache_dir)
+                except Exception as e:
+                    raise
+        if kwargs.get('init_edb'):
+            if kwargs['init_edb'] is True:
+                try:
+                    self.EDB = EDB.EDB(cache_dir=self.cache_dir)
+                except Exception as e:
+                    raise
 
-            self.EDB = EDB.EDB(cache_dir=self.cache_dir)
+        if kwargs.get('init_sapi'):
+            if kwargs['init_sapi'] is True:
+                try:
+                    self.SAPI = SAPI.SAPI(debug=self.debug,
+                                          cache_dir=self.cache_dir)
+                except Exception as e:
+                    raise
 
-            # Todo: this seems broken. Fix it, for now commented out
-            # self.connect_to_trello = True
-            # if kwargs.get('connect_to_trello'):
-            #     self.connect_to_trello = kwargs['connect_to_trello']
-            # if self.connect_to_trello:
-            #     self.RedTeamTrello = \
-            #         RedTeamTrello.RedTeamTrello(cache_dir=self.cache_dir)
-
-            self.SAPI = SAPI.SAPI(debug=self.debug, cache_dir=self.cache_dir)
-        except Exception as e:
-            raise
-
-    def setup(self, **kwargs):
+    def setup_trello(self, **kwargs):
         source_dir = os.path.dirname(os.path.realpath(__file__))
 
         if '~' in self.cache_dir:
