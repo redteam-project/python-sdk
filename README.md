@@ -1,5 +1,5 @@
 # python-sdk
-Fedora Red Team Python SDK
+Red Team Project Python SDK
 
 ## Examples
 
